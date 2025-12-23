@@ -1,0 +1,71 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model City {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clients Client[]
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  cityId    String
+  name      String
+  phone     String?
+  tags      String[] @default([])
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  city    City          @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  entries LedgerEntry[]
+}
+
+enum LedgerType {
+  DEBT_ADD
+  PAYMENT
+  ADJUSTMENT
+  NOTE
+}
+
+model LedgerEntry {
+  id        String     @id @default(uuid())
+  clientId  String
+  type      LedgerType
+  amount    Decimal    @default(0) @db.Decimal(18, 2)
+  currency  String     @default("USD")
+  note      String
+  entryDate DateTime   @default(now()) // when it happened
+  createdBy String? // later: from auth user
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, entryDate])
+}
+
+model ExchangeRate {
+  id        String   @id @default(uuid())
+  usdToUzs  Decimal  @db.Decimal(18, 2)
+  usdToRub  Decimal  @db.Decimal(18, 2)
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@index([updatedAt])
+}
